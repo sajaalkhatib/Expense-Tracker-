@@ -1,5 +1,6 @@
-const { Pool } = require("pg");
-require("dotenv").config();
+const { Pool } = require("pg"); //managing connection to postgres
+
+require("dotenv").config(); //read file .env
 
 const pool = new Pool({
     user: process.env.DB_USER,
