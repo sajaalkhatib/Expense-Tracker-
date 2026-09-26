@@ -27,3 +27,38 @@
 //   - Check the id before the query. A text like "abc" makes PostgreSQL throw an error.
 //   - Enable CORS so the frontend can talk to the server.
 //   - Test every endpoint with Thunder Client BEFORE you connect the frontend.
+
+
+const pool = require('./db'); //import the pool object from db.js
+require("dotenv").config(); 
+pool.query('SELECT NOW()', (error,result)=>{
+    if (error) {
+        console.error('Error connecting to the database:', error);
+    } 
+    else {
+        console.log("Database connected successfully!");
+        console.log(result.rows);
+
+    }
+
+    pool.end(); //close the pool of connections to the database
+
+});
+
+const express = require('express');
+const cors = require('cors');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+
+app.get('/', (req, res) => {
+    res.json({ message: 'Welcome to the Expense Tracker API!' });
+});
+
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
+

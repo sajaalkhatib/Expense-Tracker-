@@ -1,0 +1,27 @@
+{
+  "name": "expense-tracker-",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sajaalkhatib/Expense-Tracker-.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/sajaalkhatib/Expense-Tracker-/issues"
+  },
+  "homepage": "https://github.com/sajaalkhatib/Expense-Tracker-#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.4",
+    "express": "^5.2.1",
+    "pg": "^8.23.0"
+  }
+}
