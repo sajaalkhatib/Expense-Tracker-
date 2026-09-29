@@ -1,103 +1,261 @@
-// Expense Tracker - frontend logic
-
-// PHASE 2
-// Your backend from Phase 1 is already running, with real expenses in the
-// database (from schema.sql). Build this page directly against it with
-// fetch and async/await - there is no in-memory or localStorage stage
-// this time, and no sample data file.
-//
-// A possible structure (change it if you have a better idea):
-//   - async function getExpenses()          fetch(API_URL), return the JSON
-//   - async function addExpense(data)       fetch(API_URL, { method: "POST", ... })
-//   - async function updateExpense(id,data) fetch(API_URL + "/" + id, { method: "PUT", ... })
-//   - async function deleteExpense(id)      fetch(API_URL + "/" + id, { method: "DELETE" })
-//   - async function refresh()              get the list, then call renderTable and renderSummary
-//   - renderTable(list)                     build the table rows from the array the API returned
-//   - renderSummary(list)                   update the summary cards
-//   - applyFilter()                         re-render with the list filtered by category
-//
-// Don't forget:
-//   - Show a Bootstrap spinner while a request is in flight.
-//   - Wrap every fetch call in try/catch, and show a Bootstrap alert on failure.
-//   - After add, edit, or delete, call refresh() so the page always shows
-//     what the server actually saved - never update the table by hand.
-//   - The API is at http://localhost:3000/api/expenses (see the Roadmap).
-
 const API_URL = "http://localhost:3000/api/expenses";
 
-async function getExpenses() {
-    try{
-        showLoading(true);
-        const response =await fetch(API_URL);
+let expenses = [];
 
-        if(!response.ok){
-            throw new Error(`Falid to load expenses status:${response.status}`);
-        }
-        
-        const expenses = await response.json();
-        return expenses;
-        
+async function getExpenses() {
+  try {
+    showLoading(true);
+    const response = await fetch(API_URL);
+
+    if (!response.ok) {
+      throw new Error(`Failed to load expenses status: ${response.status}`);
     }
-    catch(error){
-        showAlert(error.message,"danger")
-        return[];
-    }
-    finally{
-        showLoading(false)
-    }
-    
+
+    expenses = await response.json();
+    return expenses;
+
+  } catch (error) {
+    showAlert("Could not connect to the server. Please make sure the backend is running.", "danger");
+    expenses = [];
+    return [];
+
+  } finally {
+    showLoading(false);
+  }
 }
 
-function renderSummary(expenses) {
-    const totalAmountElement = document.getElementById("totalAmount");
-    const expensesCountElement = document.getElementById("expensesCount");
-    const highestExpenseElement = document.getElementById("highestExpense");
+async function addExpense(data) {
+  try {
+    showLoading(true);
 
-    const totalAmount = expenses.reduce((sum, expense) => {
-        return sum + Number(expense.amount);
-    }, 0);
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
 
-    const expensesCount = expenses.length;
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to add expense");
+    }
 
-    const highestExpense = expenses.length > 0
-        ? Math.max(...expenses.map(expense => Number(expense.amount)))
-        : 0;
+    showAlert("Expense added successfully!", "success");
+    await refresh();
 
-    totalAmountElement.textContent = `$${totalAmount.toFixed(2)}`;
-    expensesCountElement.textContent = expensesCount;
-    highestExpenseElement.textContent = `$${highestExpense.toFixed(2)}`;
+  } catch (error) {
+    showAlert(error.message, "danger");
+
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function updateExpense(id, data) {
+  try {
+    showLoading(true);
+
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to update expense");
+    }
+
+    showAlert("Expense updated successfully!", "success");
+
+    const modalElement = document.getElementById("editModal");
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    if (modal) {
+      modal.hide();
+    }
+
+    await refresh();
+
+  } catch (error) {
+    showAlert(error.message, "danger");
+
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function deleteExpense(id) {
+  const confirmDelete = confirm("Are you sure you want to delete this expense?");
+  if (!confirmDelete) return;
+
+  try {
+    showLoading(true);
+
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: "DELETE"
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to delete expense");
+    }
+
+    showAlert("Expense deleted successfully!", "success");
+    await refresh();
+
+  } catch (error) {
+    showAlert(error.message, "danger");
+
+  } finally {
+    showLoading(false);
+  }
+}
+
+function renderSummary(list) {
+  const total = list.reduce((sum, item) => sum + Number(item.amount), 0);
+  const count = list.length;
+  const highest = list.length > 0
+    ? Math.max(...list.map(item => Number(item.amount)))
+    : 0;
+
+  document.getElementById("totalAmount").textContent = `$${total.toFixed(2)}`;
+  document.getElementById("expensesCount").textContent = count;
+  document.getElementById("highestExpense").textContent = `$${highest.toFixed(2)}`;
+}
+
+function renderTable(list) {
+  const tableBody = document.getElementById("expensesTableBody");
+  const noExpensesMsg = document.getElementById("noExpensesMessage");
+
+  tableBody.innerHTML = "";
+
+  if (list.length === 0) {
+    noExpensesMsg.classList.remove("d-none");
+    return;
+  }
+  noExpensesMsg.classList.add("d-none");
+
+  list.forEach(item => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td class="ps-3 fw-semibold">${item.title}</td>
+      <td>$${Number(item.amount).toFixed(2)}</td>
+      <td><span class="badge ${getBadgeClass(item.category)}">${item.category}</span></td>
+      <td>${item.date}</td>
+      <td class="text-end pe-3">
+        <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditModal(${item.id})">
+          <i class="bi bi-pencil"></i> Edit
+        </button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteExpense(${item.id})">
+          <i class="bi bi-trash"></i> Delete
+        </button>
+      </td>
+    `;
+
+    tableBody.appendChild(tr);
+  });
+}
+
+function getBadgeClass(category) {
+  if (category === "Food") return "bg-success";
+  if (category === "Transport") return "bg-info text-dark";
+  if (category === "Bills") return "bg-warning text-dark";
+  if (category === "Entertainment") return "bg-primary";
+  return "bg-secondary";
+}
+
+function applyFilter() {
+  const selected = document.getElementById("filterCategory").value;
+
+  if (selected === "All") {
+    renderTable(expenses);
+  } else {
+    const filtered = expenses.filter(item => item.category === selected);
+    renderTable(filtered);
+  }
+}
+
+function openEditModal(id) {
+  const item = expenses.find(exp => exp.id === id);
+  if (!item) return;
+
+  document.getElementById("editId").value = item.id;
+  document.getElementById("editTitle").value = item.title;
+  document.getElementById("editCategory").value = item.category;
+  document.getElementById("editAmount").value = item.amount;
+  document.getElementById("editDate").value = item.date;
+
+  const modal = new bootstrap.Modal(document.getElementById("editModal"));
+  modal.show();
 }
 
 async function refresh() {
-    const expenses = await getExpenses();
-
-    renderSummary(expenses);
-
+  const data = await getExpenses();
+  renderSummary(data);
+  applyFilter();
 }
 
-document.addEventListener("DOMContentLoaded", refresh);
+document.addEventListener("DOMContentLoaded", () => {
+  refresh();
 
-function showLoading(isLoading) {
-    const spinner = document.getElementById("loadingSpinner");
+  const dateInput = document.getElementById("date");
+  if (dateInput) {
+    dateInput.value = new Date().toISOString().split("T")[0];
+  }
 
-    if (isLoading) {
-        spinner.classList.remove("d-none");
-    } else {
-        spinner.classList.add("d-none");
+  document.getElementById("expenseForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const title = document.getElementById("title").value.trim();
+    const category = document.getElementById("category").value;
+    const amount = Number(document.getElementById("amount").value);
+    const date = document.getElementById("date").value;
+
+    if (amount <= 0) {
+      showAlert("Amount must be greater than 0", "danger");
+      return;
     }
+
+    await addExpense({ title, category, amount, date });
+
+    document.getElementById("expenseForm").reset();
+    document.getElementById("date").value = new Date().toISOString().split("T")[0];
+  });
+
+  document.getElementById("editForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById("editId").value;
+    const title = document.getElementById("editTitle").value.trim();
+    const category = document.getElementById("editCategory").value;
+    const amount = Number(document.getElementById("editAmount").value);
+    const date = document.getElementById("editDate").value;
+
+    if (amount <= 0) {
+      showAlert("Amount must be greater than 0", "danger");
+      return;
+    }
+
+    await updateExpense(id, { title, category, amount, date });
+  });
+
+  document.getElementById("filterCategory").addEventListener("change", applyFilter);
+});
+
+function showLoading(show) {
+  const spinner = document.getElementById("loadingSpinner");
+  if (!spinner) return;
+  if (show) spinner.classList.remove("d-none");
+  else spinner.classList.add("d-none");
 }
 
 function showAlert(message, type = "danger") {
-    const alertContainer = document.getElementById("alertContainer");
+  const alertBox = document.getElementById("alertContainer");
+  if (!alertBox) return;
 
-    alertContainer.innerHTML = `
-        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-            ${message}
-            <button type="button"
-                    class="btn-close"
-                    data-bs-dismiss="alert"
-                    aria-label="Close">
-            </button>
-        </div>
-    `;
+  alertBox.innerHTML = `
+    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  `;
 }
