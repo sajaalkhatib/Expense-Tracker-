@@ -164,14 +164,25 @@ function getBadgeClass(category) {
 }
 
 function applyFilter() {
-  const selected = document.getElementById("filterCategory").value;
+  const selectedCategory = document.getElementById("filterCategory").value;
+  const searchTerm = document.getElementById("searchTitle").value.trim().toLowerCase();
+  const selectedMonth = document.getElementById("filterMonth").value;
 
-  if (selected === "All") {
-    renderTable(expenses);
-  } else {
-    const filtered = expenses.filter(item => item.category === selected);
-    renderTable(filtered);
+  let filtered = expenses;
+
+  if (selectedCategory !== "All") {
+    filtered = filtered.filter(item => item.category === selectedCategory);
   }
+
+  if (searchTerm) {
+    filtered = filtered.filter(item => item.title.toLowerCase().includes(searchTerm));
+  }
+
+  if (selectedMonth) {
+    filtered = filtered.filter(item => item.date.startsWith(selectedMonth));
+  }
+
+  renderTable(filtered);
 }
 
 function openEditModal(id) {
@@ -239,7 +250,43 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("filterCategory").addEventListener("change", applyFilter);
+  document.getElementById("searchTitle").addEventListener("input", applyFilter);
+  document.getElementById("filterMonth").addEventListener("change", applyFilter);
+
+  document.getElementById("clearFiltersBtn").addEventListener("click", () => {
+    document.getElementById("searchTitle").value = "";
+    document.getElementById("filterCategory").value = "All";
+    document.getElementById("filterMonth").value = "";
+    applyFilter();
+  });
+
+  document.getElementById("downloadCsvBtn").addEventListener("click", downloadCSV);
 });
+
+function downloadCSV() {
+  if (expenses.length === 0) {
+    showAlert("No expenses to download.", "warning");
+    return;
+  }
+
+  const header = "Title,Amount,Category,Date";
+
+  const rows = expenses.map(item =>
+    `${item.title},${item.amount},${item.category},${item.date}`
+  );
+
+  const csvContent = [header, ...rows].join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "expenses.csv";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
 
 function showLoading(show) {
   const spinner = document.getElementById("loadingSpinner");
