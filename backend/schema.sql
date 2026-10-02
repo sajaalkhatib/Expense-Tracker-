@@ -1,9 +1,9 @@
--- Expense Tracker: database schema
--- Run this file once to create the table and add some sample data.
--- Running it again deletes the table and starts from the sample data.
+-- Expense Tracker: Database Schema
 
+-- Drop table if it exists
 DROP TABLE IF EXISTS expenses;
 
+-- Create expenses table with validation constraints
 CREATE TABLE expenses (
   id       SERIAL PRIMARY KEY,
   title    VARCHAR(100)  NOT NULL CHECK (btrim(title) <> ''),
@@ -12,7 +12,9 @@ CREATE TABLE expenses (
   date     DATE          NOT NULL
 );
 
+-- Insert initial sample data
 INSERT INTO expenses (title, amount, category, date) VALUES
+
   ('Lunch',            4.50,  'Food',          '2026-01-15'),
   ('Bus ticket',       1.20,  'Transport',     '2026-01-15'),
   ('Electricity bill', 32.00, 'Bills',         '2026-01-18'),
@@ -21,3 +23,4 @@ INSERT INTO expenses (title, amount, category, date) VALUES
   ('Groceries',        27.75, 'Food',          '2026-02-02'),
   ('Taxi',             6.00,  'Transport',     '2026-02-04'),
   ('Internet bill',    20.00, 'Bills',         '2026-02-07');
+

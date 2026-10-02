@@ -6,11 +6,14 @@ const pool = require('./db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
+// Allowed expense categories
 const ALLOWED_CATEGORIES = ['Food', 'Transport', 'Bills', 'Entertainment', 'Other'];
 
+// Validate ID from URL parameters
 function isValidId(id) {
     if (!id || typeof id !== 'string') return false;
     const trimmed = id.trim();
@@ -19,6 +22,8 @@ function isValidId(id) {
     return Number.isInteger(num) && num > 0;
 }
 
+
+// Validate expense payload for POST and PUT requests
 function validateExpenseData(body) {
     if (!body || typeof body !== 'object') {
         return 'Request body must be a valid JSON object.';
@@ -26,10 +31,12 @@ function validateExpenseData(body) {
 
     const { title, amount, category, date } = body;
 
+    // Check required fields
     if (title === undefined || amount === undefined || category === undefined || date === undefined) {
         return 'All fields (title, amount, category, date) are required.';
     }
 
+    // Validate title
     if (typeof title !== 'string' || title.trim() === '') {
         return 'Title must be a non-empty string.';
     }
@@ -37,6 +44,7 @@ function validateExpenseData(body) {
         return 'Title must not exceed 100 characters.';
     }
 
+    // Validate amount
     if (amount === null || typeof amount === 'boolean' || Array.isArray(amount)) {
         return 'Amount must be a number greater than 0.';
     }
@@ -45,10 +53,12 @@ function validateExpenseData(body) {
         return 'Amount must be a number greater than 0.';
     }
 
+    // Validate category
     if (typeof category !== 'string' || !ALLOWED_CATEGORIES.includes(category.trim())) {
         return `Category must be one of the following: ${ALLOWED_CATEGORIES.join(', ')}.`;
     }
 
+    // Validate date format (YYYY-MM-DD)
     if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date.trim())) {
         return 'Date must be in YYYY-MM-DD format.';
     }
@@ -60,10 +70,12 @@ function validateExpenseData(body) {
     return null;
 }
 
+// Health check endpoint
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to the Expense Tracker API!' });
 });
 
+// GET /api/expenses - Retrieve all expenses
 app.get('/api/expenses', async (req, res) => {
     try {
         const queryText = `
@@ -79,6 +91,7 @@ app.get('/api/expenses', async (req, res) => {
     }
 });
 
+// GET /api/expenses/:id - Retrieve an expense by ID
 app.get('/api/expenses/:id', async (req, res) => {
     const { id } = req.params;
 
@@ -105,6 +118,7 @@ app.get('/api/expenses/:id', async (req, res) => {
     }
 });
 
+// POST /api/expenses - Add a new expense
 app.post('/api/expenses', async (req, res) => {
     const validationError = validateExpenseData(req.body);
     if (validationError) {
@@ -131,6 +145,7 @@ app.post('/api/expenses', async (req, res) => {
     }
 });
 
+// PUT /api/expenses/:id - Update an existing expense
 app.put('/api/expenses/:id', async (req, res) => {
     const { id } = req.params;
 
@@ -169,6 +184,7 @@ app.put('/api/expenses/:id', async (req, res) => {
     }
 });
 
+// DELETE /api/expenses/:id - Delete an expense by ID
 app.delete('/api/expenses/:id', async (req, res) => {
     const { id } = req.params;
 
@@ -198,6 +214,7 @@ app.delete('/api/expenses/:id', async (req, res) => {
     }
 });
 
+// Start the server
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });

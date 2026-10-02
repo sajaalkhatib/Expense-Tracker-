@@ -1,7 +1,9 @@
 const API_URL = "http://localhost:3000/api/expenses";
 
+// In-memory expenses cache
 let expenses = [];
 
+// Fetch all expenses from backend API
 async function getExpenses() {
   try {
     showLoading(true);
@@ -24,6 +26,7 @@ async function getExpenses() {
   }
 }
 
+// Add a new expense (POST)
 async function addExpense(data) {
   try {
     showLoading(true);
@@ -50,6 +53,7 @@ async function addExpense(data) {
   }
 }
 
+// Update an existing expense (PUT)
 async function updateExpense(id, data) {
   try {
     showLoading(true);
@@ -67,6 +71,7 @@ async function updateExpense(id, data) {
 
     showAlert("Expense updated successfully!", "success");
 
+    // Close the edit modal
     const modalElement = document.getElementById("editModal");
     const modal = bootstrap.Modal.getInstance(modalElement);
     if (modal) {
@@ -83,8 +88,22 @@ async function updateExpense(id, data) {
   }
 }
 
+// Delete an expense (DELETE)
 async function deleteExpense(id) {
+  // Update browser URL to show delete ID (e.g. ?delete=5)
+  const url = new URL(window.location);
+  if (url.searchParams.get("delete") !== String(id)) {
+    url.searchParams.set("delete", id);
+    window.history.pushState({ deleteId: id }, "", url);
+  }
+
   const confirmDelete = confirm("Are you sure you want to delete this expense?");
+
+  // Remove delete ID from URL once confirmed or cancelled
+  const clearUrl = new URL(window.location);
+  clearUrl.searchParams.delete("delete");
+  window.history.pushState({}, "", clearUrl);
+
   if (!confirmDelete) return;
 
   try {
@@ -109,6 +128,7 @@ async function deleteExpense(id) {
   }
 }
 
+// Calculate and render summary stats
 function renderSummary(list) {
   const total = list.reduce((sum, item) => sum + Number(item.amount), 0);
   const count = list.length;
@@ -121,6 +141,7 @@ function renderSummary(list) {
   document.getElementById("highestExpense").textContent = `$${highest.toFixed(2)}`;
 }
 
+// Render expense rows in the table
 function renderTable(list) {
   const tableBody = document.getElementById("expensesTableBody");
   const noExpensesMsg = document.getElementById("noExpensesMessage");
@@ -155,6 +176,7 @@ function renderTable(list) {
   });
 }
 
+// Get badge color class for category
 function getBadgeClass(category) {
   if (category === "Food") return "bg-success";
   if (category === "Transport") return "bg-info text-dark";
@@ -163,6 +185,7 @@ function getBadgeClass(category) {
   return "bg-secondary";
 }
 
+// Filter expenses by category, search text, and month
 function applyFilter() {
   const selectedCategory = document.getElementById("filterCategory").value;
   const searchTerm = document.getElementById("searchTitle").value.trim().toLowerCase();
@@ -185,6 +208,7 @@ function applyFilter() {
   renderTable(filtered);
 }
 
+// Open modal and pre-fill data for editing
 function openEditModal(id) {
   const item = expenses.find(exp => exp.id === id);
   if (!item) return;
@@ -195,24 +219,50 @@ function openEditModal(id) {
   document.getElementById("editAmount").value = item.amount;
   document.getElementById("editDate").value = item.date;
 
-  const modal = new bootstrap.Modal(document.getElementById("editModal"));
+  // Update browser URL to show edit ID (e.g. ?edit=5)
+  const url = new URL(window.location);
+  if (url.searchParams.get("edit") !== String(id)) {
+    url.searchParams.set("edit", id);
+    window.history.pushState({ editId: id }, "", url);
+  }
+
+  const modalElement = document.getElementById("editModal");
+  const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
   modal.show();
 }
 
+// Check URL query parameters for edit or delete ID on load
+function checkUrlParams() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const editId = urlParams.get("edit");
+  const deleteId = urlParams.get("delete");
+
+  if (editId) {
+    openEditModal(Number(editId));
+  } else if (deleteId) {
+    deleteExpense(Number(deleteId));
+  }
+}
+
+// Fetch latest data and update UI
 async function refresh() {
   const data = await getExpenses();
   renderSummary(data);
   applyFilter();
+  checkUrlParams();
 }
 
+// Initialize application on DOM load
 document.addEventListener("DOMContentLoaded", () => {
   refresh();
 
+  // Set today as default date in add form
   const dateInput = document.getElementById("date");
   if (dateInput) {
     dateInput.value = new Date().toISOString().split("T")[0];
   }
 
+  // Handle add expense form submit
   document.getElementById("expenseForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -232,6 +282,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("date").value = new Date().toISOString().split("T")[0];
   });
 
+  // Handle edit expense form submit
   document.getElementById("editForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -249,10 +300,41 @@ document.addEventListener("DOMContentLoaded", () => {
     await updateExpense(id, { title, category, amount, date });
   });
 
+  // Remove edit ID from URL when modal is closed
+  const editModalEl = document.getElementById("editModal");
+  if (editModalEl) {
+    editModalEl.addEventListener("hidden.bs.modal", () => {
+      const url = new URL(window.location);
+      if (url.searchParams.has("edit")) {
+        url.searchParams.delete("edit");
+        window.history.pushState({}, "", url);
+      }
+    });
+  }
+
+  // Handle browser back and forward navigation
+  window.addEventListener("popstate", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const editId = urlParams.get("edit");
+    const deleteId = urlParams.get("delete");
+    const modalEl = document.getElementById("editModal");
+    const modal = bootstrap.Modal.getInstance(modalEl);
+
+    if (editId) {
+      openEditModal(Number(editId));
+    } else if (deleteId) {
+      deleteExpense(Number(deleteId));
+    } else if (modal) {
+      modal.hide();
+    }
+  });
+
+  // Filter and search event listeners
   document.getElementById("filterCategory").addEventListener("change", applyFilter);
   document.getElementById("searchTitle").addEventListener("input", applyFilter);
   document.getElementById("filterMonth").addEventListener("change", applyFilter);
 
+  // Clear filters button
   document.getElementById("clearFiltersBtn").addEventListener("click", () => {
     document.getElementById("searchTitle").value = "";
     document.getElementById("filterCategory").value = "All";
@@ -260,9 +342,11 @@ document.addEventListener("DOMContentLoaded", () => {
     applyFilter();
   });
 
+  // Download CSV button
   document.getElementById("downloadCsvBtn").addEventListener("click", downloadCSV);
 });
 
+// Export expenses to CSV file
 function downloadCSV() {
   if (expenses.length === 0) {
     showAlert("No expenses to download.", "warning");
@@ -272,12 +356,12 @@ function downloadCSV() {
   const header = "Title,Amount,Category,Date";
 
   const rows = expenses.map(item =>
-    `${item.title},${item.amount},${item.category},${item.date}`
+    `"${item.title.replace(/"/g, '""')}",${item.amount},${item.category},${item.date}`
   );
 
   const csvContent = [header, ...rows].join("\n");
 
-  const blob = new Blob([csvContent], { type: "text/csv" });
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
 
   const a = document.createElement("a");
@@ -288,6 +372,7 @@ function downloadCSV() {
   URL.revokeObjectURL(url);
 }
 
+// Toggle loading spinner visibility
 function showLoading(show) {
   const spinner = document.getElementById("loadingSpinner");
   if (!spinner) return;
@@ -295,6 +380,7 @@ function showLoading(show) {
   else spinner.classList.add("d-none");
 }
 
+// Display temporary alert message
 function showAlert(message, type = "danger") {
   const alertBox = document.getElementById("alertContainer");
   if (!alertBox) return;
