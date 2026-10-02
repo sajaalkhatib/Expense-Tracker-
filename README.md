@@ -11,27 +11,6 @@ A full-stack, responsive expense tracking web application designed to help users
 
 ---
 
-## 📑 Table of Contents
-
-- [✨ Key Features](#-key-features)
-- [🗺️ Project Status & Roadmap](#️-project-status--roadmap)
-- [📂 Project Structure](#-project-structure)
-- [🛠️ Tech Stack](#️-tech-stack)
-- [🚀 Getting Started & Local Setup](#-getting-started--local-setup)
-  - [1. Prerequisites](#1-prerequisites)
-  - [2. Clone the Repository](#2-clone-the-repository)
-  - [3. Database Setup](#3-database-setup)
-  - [4. Backend Configuration & Launch](#4-backend-configuration--launch)
-  - [5. Launch the Frontend](#5-launch-the-frontend)
-- [⚙️ Environment Variables](#️-environment-variables)
-- [📡 API Endpoints Reference](#-api-endpoints-reference)
-- [📸 API Testing & Verification](#-api-testing--verification)
-- [📋 Data Validation Rules](#-data-validation-rules)
-- [🗄️ Database Schema](#️-database-schema)
-- [📄 License](#-license)
-
----
-
 ## ✨ Key Features
 
 ### 🖥️ Frontend & User Experience
