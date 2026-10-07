@@ -6,12 +6,11 @@ const pool = require('./db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+
 app.use(cors());
 app.use(express.json());
 
-// Allowed expense categories
-const ALLOWED_CATEGORIES = ['Food', 'Transport', 'Bills', 'Entertainment', 'Other'];
+const ALLOWED_CATEGORIES = ['Food', 'Transport', 'Bills', 'Entertainment', 'Other','health'];
 
 // Validate ID from URL parameters
 function isValidId(id) {
@@ -31,12 +30,10 @@ function validateExpenseData(body) {
 
     const { title, amount, category, date } = body;
 
-    // Check required fields
     if (title === undefined || amount === undefined || category === undefined || date === undefined) {
         return 'All fields (title, amount, category, date) are required.';
     }
 
-    // Validate title
     if (typeof title !== 'string' || title.trim() === '') {
         return 'Title must be a non-empty string.';
     }
@@ -53,12 +50,11 @@ function validateExpenseData(body) {
         return 'Amount must be a number greater than 0.';
     }
 
-    // Validate category
+
     if (typeof category !== 'string' || !ALLOWED_CATEGORIES.includes(category.trim())) {
         return `Category must be one of the following: ${ALLOWED_CATEGORIES.join(', ')}.`;
     }
 
-    // Validate date format (YYYY-MM-DD)
     if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date.trim())) {
         return 'Date must be in YYYY-MM-DD format.';
     }
@@ -70,7 +66,6 @@ function validateExpenseData(body) {
     return null;
 }
 
-// Health check endpoint
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to the Expense Tracker API!' });
 });
@@ -138,10 +133,11 @@ app.post('/api/expenses', async (req, res) => {
             RETURNING id, title, amount::float8, category, to_char(date, 'YYYY-MM-DD') AS date
         `;
         const result = await pool.query(queryText, [cleanTitle, numAmount, cleanCategory, cleanDate]);
-        res.status(201).json(result.rows[0]);
+        res.status(201).json({ message: 'Expense added successfully' });
+
     } catch (err) {
         console.error('Error adding expense:', err);
-        res.status(500).json({ message: 'Failed to add expense' });
+        res.status(500).json({ message: 'Failed to add expense ' });
     }
 });
 

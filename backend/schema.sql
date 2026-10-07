@@ -1,9 +1,5 @@
--- Expense Tracker: Database Schema
-
--- Drop table if it exists
 DROP TABLE IF EXISTS expenses;
 
--- Create expenses table with validation constraints
 CREATE TABLE expenses (
   id       SERIAL PRIMARY KEY,
   title    VARCHAR(100)  NOT NULL CHECK (btrim(title) <> ''),
@@ -12,7 +8,6 @@ CREATE TABLE expenses (
   date     DATE          NOT NULL
 );
 
--- Insert initial sample data
 INSERT INTO expenses (title, amount, category, date) VALUES
 
   ('Lunch',            4.50,  'Food',          '2026-01-15'),

@@ -1,6 +1,5 @@
 const API_URL = "http://localhost:3000/api/expenses";
 
-// In-memory expenses cache
 let expenses = [];
 
 // Fetch all expenses from backend API
@@ -16,12 +15,14 @@ async function getExpenses() {
     expenses = await response.json();
     return expenses;
 
-  } catch (error) {
+  } 
+  catch (error) {
     showAlert("Could not connect to the server. Please make sure the backend is running.", "danger");
     expenses = [];
     return [];
 
-  } finally {
+  } 
+  finally {
     showLoading(false);
   }
 }
@@ -42,7 +43,7 @@ async function addExpense(data) {
       throw new Error(errorData.message || "Failed to add expense");
     }
 
-    showAlert("Expense added successfully!", "success");
+    showAlert(`Expense added successfully! ${data.title}`, "success");
     await refresh();
 
   } catch (error) {
@@ -90,7 +91,6 @@ async function updateExpense(id, data) {
 
 // Delete an expense (DELETE)
 async function deleteExpense(id) {
-  // Update browser URL to show delete ID (e.g. ?delete=5)
   const url = new URL(window.location);
   if (url.searchParams.get("delete") !== String(id)) {
     url.searchParams.set("delete", id);
@@ -99,7 +99,6 @@ async function deleteExpense(id) {
 
   const confirmDelete = confirm("Are you sure you want to delete this expense?");
 
-  // Remove delete ID from URL once confirmed or cancelled
   const clearUrl = new URL(window.location);
   clearUrl.searchParams.delete("delete");
   window.history.pushState({}, "", clearUrl);
@@ -128,13 +127,14 @@ async function deleteExpense(id) {
   }
 }
 
-// Calculate and render summary stats
+// summary stats
 function renderSummary(list) {
   const total = list.reduce((sum, item) => sum + Number(item.amount), 0);
   const count = list.length;
   const highest = list.length > 0
     ? Math.max(...list.map(item => Number(item.amount)))
     : 0;
+    
 
   document.getElementById("totalAmount").textContent = `$${total.toFixed(2)}`;
   document.getElementById("expensesCount").textContent = count;
@@ -185,11 +185,43 @@ function getBadgeClass(category) {
   return "bg-secondary";
 }
 
+// تشفير كل حرف يدوياً حتى الإنجليزي
+function forceEncode(str) {
+  return str.split("").map(char => {
+    const code = char.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0");
+    return `%${code}`;
+  }).join("");
+}
+
 // Filter expenses by category, search text, and month
 function applyFilter() {
   const selectedCategory = document.getElementById("filterCategory").value;
+  //.value user input 
   const searchTerm = document.getElementById("searchTitle").value.trim().toLowerCase();
   const selectedMonth = document.getElementById("filterMonth").value;
+
+  // ✅ تشفير قسري لكل القيم باستخدام encodeURIComponent
+  let queryParts = [];
+
+  if (selectedCategory && selectedCategory !== "All") {
+    queryParts.push(`category=${forceEncode(selectedCategory)}`);
+  }
+
+  if (searchTerm) {
+    queryParts.push(`search=${forceEncode(searchTerm)}`);
+  }
+
+  if (selectedMonth) {
+    queryParts.push(`month=${forceEncode(selectedMonth)}`);
+  }
+
+  const encodedQuery = queryParts.length > 0 ? "?" + queryParts.join("&") : window.location.pathname;
+
+  // حدّث الـ URL في المتصفح بدون ما تعيد تحميل الصفحة
+  window.history.pushState({}, "", window.location.pathname + (queryParts.length > 0 ? "?" + queryParts.join("&") : ""));
+
+  // شوفي الـ URL المشفر في الـ Console
+  console.log("🔗 URL المشفر:", window.location.href);
 
   let filtered = expenses;
 
@@ -208,7 +240,6 @@ function applyFilter() {
   renderTable(filtered);
 }
 
-// Open modal and pre-fill data for editing
 function openEditModal(id) {
   const item = expenses.find(exp => exp.id === id);
   if (!item) return;
@@ -219,7 +250,6 @@ function openEditModal(id) {
   document.getElementById("editAmount").value = item.amount;
   document.getElementById("editDate").value = item.date;
 
-  // Update browser URL to show edit ID (e.g. ?edit=5)
   const url = new URL(window.location);
   if (url.searchParams.get("edit") !== String(id)) {
     url.searchParams.set("edit", id);
@@ -231,7 +261,6 @@ function openEditModal(id) {
   modal.show();
 }
 
-// Check URL query parameters for edit or delete ID on load
 function checkUrlParams() {
   const urlParams = new URLSearchParams(window.location.search);
   const editId = urlParams.get("edit");
@@ -252,17 +281,14 @@ async function refresh() {
   checkUrlParams();
 }
 
-// Initialize application on DOM load
 document.addEventListener("DOMContentLoaded", () => {
   refresh();
 
-  // Set today as default date in add form
   const dateInput = document.getElementById("date");
   if (dateInput) {
     dateInput.value = new Date().toISOString().split("T")[0];
   }
 
-  // Handle add expense form submit
   document.getElementById("expenseForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -282,7 +308,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("date").value = new Date().toISOString().split("T")[0];
   });
 
-  // Handle edit expense form submit
   document.getElementById("editForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -380,7 +405,6 @@ function showLoading(show) {
   else spinner.classList.add("d-none");
 }
 
-// Display temporary alert message
 function showAlert(message, type = "danger") {
   const alertBox = document.getElementById("alertContainer");
   if (!alertBox) return;
